@@ -1,13 +1,16 @@
 #! !P3!
 
 ###
-### Handle command line and ini file arguments.
-###     Uses docopt for command line args.
-###         SYSARGVS dict contains docopt resuts.
-###     Uses configparser for init file args.
-###         INI object contains configparser results.
-###     ARGS is a dict containing any INI['args'][*] 
-###     section plus updates from SYSARGVS.
+### Process command line and ini file arguments.
+###   1. For command line args, uses either:
+###        Docopt: see get_sysargvs(_doc=..., _docopt=True)
+###        Simple KVs: see get_sysargvs(_clkvs=True)
+###      SYSARGVS dict contains command line results.
+###   2. Uses configparser for init file args.
+###        INI object contains configparser results.
+###      ARGS is a dict containing any INI['args'][*] 
+###        section plus updates from SYSARGVS.
+###   ARGS is the final dict of arguments.
 ###
 
 import os, sys, configparser
@@ -70,13 +73,13 @@ def get_clkvs(lowercase=True):
     finally:
         return clkvs
 
-def get_sysargvs(_doc=None, _help=None, _docopt=True, _clkvs=False):
+def get_sysargvs(docstr=None, help=None, docopt=True, clkvs=False):
     global SYSARGVS
-    if   _docopt:
+    if   docopt:
         # Use docopt to parse sys.argv.
-        SYSARGVS = docopt.docopt(_doc, help=_help, version=_VERSION)
+        SYSARGVS = docopt.docopt(docstr, help=help, version=_VERSION)
         # (Will do a sys.exit() after printing help.)
-    elif _clkvs:
+    elif clkvs:
         SYSARGVS = get_clkvs()
     else:
         SYSARGVS = {}
@@ -92,7 +95,7 @@ def get_args(doc=None, version=None, me=None, help=True, docopt=True, clkvs=Fals
         else:
             INIPFN = _ME + '.ini'
         CWD = os.getcwd()
-        get_sysargvs(_doc=doc, _help=help, _docopt=docopt, _clkvs=clkvs)
+        get_sysargvs(docstr=doc, help=help, docopt=docopt, clkvs=clkvs)
         get_ini()
         # Build ARGS from INI[args] and SYSARGVS (overrides).
         try:

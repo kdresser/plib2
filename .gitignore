@@ -1,0 +1,15 @@
+*.pyc
+*.rpt
+*.pkl
+*.rar
+*.txt
+*.zip
+*.bat
+*.log
+*.sql
+*.pyproj
+*.sln
+*dump*
+zz*.*
+/__pycache__
+!notes.txt

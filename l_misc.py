@@ -1,11 +1,9 @@
 # Copyright 2011, 2015 by J Kelly Dresser.  All rights reserved.
-#! !P2! !P3!
+#> !P2! !P3!
 
 ###
 ### l_misc:
 ###
-
-### 130801
 
 import sys, time, binascii
 
