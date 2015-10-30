@@ -3,6 +3,7 @@
 ## >>> Simple Flask logging to file and socket connections for the duration of a request.
 ##     Connections, drawn from pools, are supplied (or None) at creation.
 ##     No console output here, except for debugging.
+##     151030: Replace socket logging with xlog access.
 #
 
 # Note: '\n' is the line ending used throughout.
@@ -10,10 +11,11 @@
 class FlaskLog(object):
   """A logging object using supplied thread-shared file and socket connections."""	
 
-  def __init__(self, lf, ls, usexlog):
+  ###def __init__(self, lf, ls, usexlog):
+  def __init__(self, lf, ls):
     self.lf = lf
     self.ls = ls
-    self.usexlog = usexlog	# !TEMP! A flag.
+    ###self.usexlog = usexlog	# !TEMP! A flag.
 
   def write(self, raw, flush=True):
     """Low level raw write to both file and socket logs, as possible."""
@@ -24,16 +26,22 @@ class FlaskLog(object):
         self.lf.flush()
 
     if self.ls is not None:
-      if self.usexlog:
-        if isinstance(raw, bytes):	# xlog wants strs.
-          raw = raw.decode('utf-8')
-        #$#print('~~ mLog.null:', repr(raw))#$#
+        # xlog wants str's.
+        if isinstance(raw, bytes):	
+            raw = raw.decode('utf-8')
         self.ls.null(raw)	# No logging level, yet.
-      else:
-        if isinstance(raw, str):
-          raw = raw.encode('utf-8')	# Sockets want bytes.
-        #$#print('~~ mLog.sendall:', repr(raw))#$#
-        self.ls.sendall(raw)
+        '''... Goes.
+        if self.usexlog:
+            if isinstance(raw, bytes):	# xlog wants strs.
+                raw = raw.decode('utf-8')
+            #$#print('~~ mLog.null:', repr(raw))#$#
+            self.ls.null(raw)	# No logging level, yet.
+        else:
+            if isinstance(raw, str):
+                raw = raw.encode('utf-8')	# Sockets want bytes.
+            #$#print('~~ mLog.sendall:', repr(raw))#$#
+            self.ls.sendall(raw)
+        ...'''
 
   def flush(self):
     """Flush a log file.  Superfluous bcs writing defaults to flushing."""

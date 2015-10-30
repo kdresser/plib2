@@ -110,8 +110,7 @@ def ZZZcurrow2dict(cur, row, squawk=True):      # 151003: Discontinued, use dict
 
 def utcut():
   """-> UTC Unix Time."""
-  z = time.time()
-  return z
+  return time.time()
 
 def utcut2local(utcut):
   """-> 'Dow yyyy-mm-dd hh:mm:ss' (seconds resolution)."""

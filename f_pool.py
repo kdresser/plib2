@@ -38,8 +38,8 @@ class FlaskPool(object):
         obj = self.ctor(self.nall + 1)
         self.pool.append(obj)
         self.nall += 1
-      z = self.pool.pop()
-      return z
+      return self.pool.pop()
+      #@return z
 
   def getw(self, w=0.1, max=None):	
     """Get an object from pool, waiting up to max seconds.  Up to maxn objects are lazily created."""

@@ -14,7 +14,7 @@
 ###
 
 import os, sys, configparser
-import docopt
+import docopt as _docopt
 import l_misc as _m
 
 INI = None          # Contains [args], plus possibly other sections.
@@ -77,7 +77,7 @@ def get_sysargvs(docstr=None, help=None, docopt=True, clkvs=False):
     global SYSARGVS
     if   docopt:
         # Use docopt to parse sys.argv.
-        SYSARGVS = docopt.docopt(docstr, help=help, version=_VERSION)
+        SYSARGVS = _docopt.docopt(docstr, help=help, version=_VERSION)
         # (Will do a sys.exit() after printing help.)
     elif clkvs:
         SYSARGVS = get_clkvs()

@@ -149,4 +149,3 @@ class XLog():
             self._xlog(msg, el=0, sl='+')       
             if self.sw:
                 self.sw.error(msg)
-
