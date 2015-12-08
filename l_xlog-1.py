@@ -2,20 +2,19 @@
 
 #
 ## l_xlog: Class for tx'ing to tcp/ip socket logger app "xlog".
-##         Messages (actually dicts) are saved to a queue and sent
-##         from within a thread.  As much processing as possible is 
+##         A queue of messages is saved to a queue and sent frp, 
+##         within a thread.  As much processing as possible is 
 ##         deferred to the thread.
-##         Functions that create (or accept) these dicts:
-##           1. null, debug, info, warning, error, critical and extra
-##              take a msg plus optional srcid and subid overrides.
-##              el and sl are determined by each function.
-##              Uses msg2xlog.
-##           2. msg2xlog(msg, srcid=None, subid=None, el=None, sl=None).
-##           3. logd2xlog(logd) for a ready-to-use dict.
-##           4. logdj2xlog(logdj) for a ready-to-use json'd dict.
+##         Functions:
+##           1. null(msg), debug(msg), info(msg), warning(msg), 
+#3              error(msg), critical(msg), extra(msg) that 
+##              add the appropriate el & sl.
+##           2. msg2xlog(msg, el=None, sl=None) for a simple message.
+##           3. d2xlog(d) for a ready-to-use dict.
+##           4. j2xlog(j) for a ready-to-use json'd dict.
 ##         Uses XLogTxRx class which has backlogging and 
 ##         reconnection abilities.
-##         Can be a nop logger with nop=True.
+##         Can be a null logger with null=True.
 #
 
 import json, queue, threading
@@ -28,15 +27,14 @@ SORT_KEYS = True
 
 class XLog():
 
-    def __init__(self, xloghost=None, xlogport=None, xsrcid=None, xsubid=None, xlogel=2, xlogsl='_', 
-                 sl=None, sw=None, txrate=0.02, nop=False):
+    def __init__(self, xloghost=None, xlogport=None, xsrcid=None, xsubid=None, xlogel=2, xlogsl='_', sl=None, sw=None, txrate=0.02, nop=False):
         me = 'XLog.__init__'
         self.nop      = nop         # Make a do-nothing logger.
         self.xlog     = None        # Default no logging until host & port connected.
         self.xloghost = xloghost    # xlog server host IP.
         self.xlogport = xlogport    # xlog server port.
-        # srcid, subid, el & sl are defaults used by message builders if no
-        # overrides are in the log dict.
+        # srcid, subid, el & sl are defaults used by message builders.
+        # Each call to an xlog output can override these.
         self.xsrcid   = xsrcid      # Initial source ID.  
         self.xsubid   = xsubid      # Initial sub    ID. 
         self.xlogel   = xlogel      # Default error-level (info).
@@ -92,8 +90,8 @@ class XLog():
                         1/0
                     otn = o[0]                      # object type number
                     if   otn == 0:                  
-                        # srcid, subid, el, sl, msg -> {_id, _si, _el, _sl, _msg}
-                        d = {'_id': str(o[1]), '_si': str(o[2]), '_el': str(o[3]), '_sl': str(o[4]), '_msg': str(o[5])}
+                        # id, si, el, sl, msg
+                        d = {'_id': str(o[1]), '_si': str(o[2]), '_msg': str(o[3]), '_el': str(o[4]), '_sl': str(o[5])}
                         j = json.dumps(d, ensure_ascii=ENSURE_ASCII, sort_keys=SORT_KEYS)
                         if DEBPRT:
                             self._p('~~ 0: [%d] -> [%d]' % (len(d), len(j)))
@@ -149,33 +147,33 @@ class XLog():
 
     # >>> msg2xlog, d2xlog & j2xlog.
 
-    def msg2xlog(self, msg, srcid=None, subid=None, el=None, sl=None):
-        """Tx msg (with optional srcid, subid, el, sl overridess) via xlog."""
-        if self.nop or not msg or not isinstance(msg, str):
+    def msg2xlog(self, msg, el=None, sl=None, srcid=None, subid=None):
+        """Tx msg (with optional el, sl) via xlog."""
+        if self.nop or not msg:
             return
         # Sample self.* defaults when adding to queue.
-        self.q.put((0,  # 0 -> srcid, subid, el, sl, msg
+        self.q.put((0,  # 0 -> mgs, el, sl
                     self.xsrcid if srcid is None else srcid, 
                     self.xsubid if subid is None else subid, 
+                    msg, 
                     self.xlogel if el is None else el,
-                    self.xlogsl if sl is None else sl, 
-                    msg), block=False)
+                    self.xlogsl if sl is None else sl), block=False)
 
-    def logd2xlog(self, logd):
+    def d2xlog(self, d):
         """Tx ready-to-use dict via xlog."""
-        # srcid, subid, el and sl must already be in dict.
-        if self.nop or not logd or not isinstance(logd, dict):
+        # Srcid and subid must already be in dict.
+        if self.nop or not d:
             return
         self.q.put((1, # 1 -> dict
-                    logd), block=False)   
+                    d), block=False)   
 
-    def logdj2xlog(self, logdj):
+    def j2xlog(self, j):
         """Tx ready-to-use json'd dict via xlog."""
         # Srcid and subid must already be in json.
-        if self.nop or not logdj or not isinstance(logdj, str):
+        if self.nop or not j:
             return
         self.q.put((2, # 2 -> json
-                    logdj), block=False)   
+                    j), block=False)   
 
     # >>> close, busy & stop.
 
@@ -206,52 +204,83 @@ class XLog():
             return
         self.q.stop = True
 
-    #
     # >>> Functions named by logging level.
-    #     msg must be a string.
-    #     srcid and subid can be supplied to override defaults.
-    #     el and sl are set by each logging level function.
-    #
+    #     Srcid and subid can be supplied to override defaults.
+    #     msg can be either dict or str.
+
+    def msg2str(self, msg):
+        if isinstance(msg, dict):
+            return json.dumps(msg, ensure_ascii=ENSURE_ASCII, sort_keys=SORT_KEYS)
+        else:
+            return str(msg)  # Catch binary.
 
     def null(self, msg=None, srcid=None, subid=None):
         """Null level msg."""
-        self.msg2xlog(msg, srcid=srcid, subid=subid, el=0, sl='_')	
+        if self.nop or not msg:
+            return
+        msg = self.msg2str(msg)
+        self.msg2xlog(msg, el=0, sl='_', srcid=srcid, subid=subid)	
+        # Simple Log?
         if self.sl:
             self.sl.null(msg)
 
     def debug(self, msg=None, srcid=None, subid=None):
         """Debug level msg."""
-        self.msg2xlog(msg, srcid=srcid, subid=subid, el=1, sl='.')
+        if self.nop or not msg:
+            return
+        msg = self.msg2str(msg)
+        self.msg2xlog(msg, el=1, sl='.', srcid=srcid, subid=subid)
+        # Simple Log?
         if self.sl:
             self.sl.debug(msg)
 
     def info(self, msg=None, srcid=None, subid=None):
         """Info level msg."""
-        self.msg2xlog(msg, srcid=srcid, subid=subid, el=2, sl='-')
+        if self.nop or not msg:
+            return
+        msg = self.msg2str(msg)
+        self.msg2xlog(msg, el=2, sl='-', srcid=srcid, subid=subid)
+        # Simple Log?
         if self.sl:
             self.sl.info(msg)
 
     def warning(self, msg=None, srcid=None, subid=None):
         """Warning level msg."""
-        self.msg2xlog(msg, srcid=srcid, subid=subid, el=3, sl='>')
+        if self.nop or not msg:
+            return
+        msg = self.msg2str(msg)
+        self.msg2xlog(msg, el=3, sl='>', srcid=srcid, subid=subid)
+        # Simple Log?
         if self.sl:
             self.sl.warning(msg)
 
     def error(self, msg=None, srcid=None, subid=None):
         """Error level msg."""
-        self.msg2xlog(msg, srcid=srcid, subid=subid, el=4, sl='*')
+        if self.nop or not msg:
+            return
+        msg = self.msg2str(msg)
+        self.msg2xlog(msg, el=4, sl='*', srcid=srcid, subid=subid)
+        # Simple Log?
         if self.sl:
             self.sl.error(msg)
 
     def critical(self, msg=None, srcid=None, subid=None):
         """Critical level msg."""
-        self.msg2xlog(msg, srcid=srcid, subid=subid, el=5, sl='!')
+        if self.nop or not msg:
+            return
+        msg = self.msg2str(msg)
+        self.msg2xlog(msg, el=5, sl='!', srcid=srcid, subid=subid)
+        # Simple Log?
         if self.sl:
             self.sl.critical(msg)
 
     def extra(self, msg=None, srcid=None, subid=None):
         """Extra level msg."""
-        self.msg2xlog(msg, srcid=srcid, subid=subid, el=6, sl='+')       
+        if self.nop or not msg:
+            return
+        msg = self.msg2str(msg)
+        self.msg2xlog(msg, el=6, sl='+', srcid=srcid, subid=subid)       
+        # Simple Log?
         if self.sl:
             self.sl.extra(msg)
 

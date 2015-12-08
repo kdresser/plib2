@@ -12,5 +12,6 @@
 *dump*
 zz*.*
 15*/
+hide/
 /__pycache__
 !notes.txt

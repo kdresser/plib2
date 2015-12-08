@@ -62,6 +62,9 @@ class FlaskLog(object):
       return
     self.write(raw)
 
+  def xlog(self, o):
+    self.xlog(o)
+
 
 class mNullLog(object):
   """A null log object for not doing logging."""
@@ -79,4 +82,7 @@ class mNullLog(object):
     pass
 
   def rawlog(self, raw):
+    pass
+
+  def xlog(self, o):
     pass

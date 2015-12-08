@@ -3,8 +3,8 @@ import time
 from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR
 import l_misc as _m
 
-# Python error levels / 10: NOTSET, DEBUG, INFO, WARNING, ERROR CRITICAL
-#                             0       1      2       3      4      5
+# Python error levels div 10: NOTSET, DEBUG, INFO, WARNING, ERROR CRITICAL
+#                                0      1      2      3       4       5
 
 TXENCODING, TXERRORS = 'ascii', 'strict'  # For Tx of unicode.
 
