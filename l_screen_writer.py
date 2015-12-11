@@ -134,8 +134,8 @@ class ScreenWriter():
             if lock:
                 self.LOCK.release()
 
-    def wait(self, s, pfx='-- ', pulse=1.0, lock=True):
-        """Wait, with a countdown.  Returns True if <ctrl>-c interruped."""
+    def wait(self, s, pfx='-- ', pulse=1.0, lock=True, quiet=False):    # 151211: Added quiet=False.
+        """Wait, with a countdown.  Returns False if <ctrl>-c interruped."""
         if lock:
             self.LOCK.acquire()
         try:
@@ -161,7 +161,10 @@ class ScreenWriter():
                     return True
                 except:
                     self.ln('%swait interrupted' % pfx, lock=False)
-                    return False
+                    if quiet:
+                        return False
+                    else:
+                        raise
         finally:
             if lock:
                 self.LOCK.release()
