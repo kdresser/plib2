@@ -23,7 +23,7 @@ class XLogTxRx():
         self.cxerrmsg = None    # Last connection attempt errmsg.
         self.txbacklog = []     # For stashing a messages when unconnected.
         self.txbackout = False  # True when draining a backlog.
-        self.txts  = 0          # Timestamp of last transmission.
+        self.txts = 0           # Timestamp of last transmission.
         self.txrate = txrate    # Mininum time between transmissions.
         self.txtimeout = txtimeout
         self.txerrmsg = None    # Last tx errmsg.

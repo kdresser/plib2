@@ -10,7 +10,7 @@ dtEPOCH = datetime.datetime.utcfromtimestamp(0)
 
 # UTC unix time now.  Has fractional seconds.
 def utcut():
-  """-> UTC Unix Time now.  Deprecated."""   
+  """-> UTC Unix Time now.  Uses library time.time."""   
   return time.time()
 
 # UTC unix time now.  Fractional seconds kludged. 
