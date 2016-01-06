@@ -14,7 +14,7 @@
 ###
 
 import os, sys, configparser
-import docopt as _docopt
+###...import docopt as _docopt  # Now conditionally imported.
 import l_dt as _dt
 import l_misc as _m
 
@@ -79,6 +79,7 @@ def get_clkvs(lowercase=True):
 def get_sysargvs(docstr=None, help=None, docopt=True, clkvs=False):
     global SYSARGVS
     if   docopt:
+        import docopt as _docopt
         # Use docopt to parse sys.argv.
         SYSARGVS = _docopt.docopt(docstr, help=help, version=VERSION)
         # (Will do a sys.exit() after printing help.)
