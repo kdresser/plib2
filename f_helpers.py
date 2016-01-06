@@ -5,12 +5,14 @@ import sys, binascii, time, math, hashlib
 
 #DOW = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')    # See below.
 
-def unicodetoascii(s, rplc=None):
+def unicodetoascii(s, encoding='ascii', rplc=None):
     """A crude str encoder.  Replaces '?' from s.encode with rplc (if not None).  Bytes returned unchanged."""
+    # Another choice: encoding='latin-1'.
     # ??? Is this sane: just to have a different replacement char than '?'?
     if not isinstance(s, str):
         return s
-    t = s.encode('ascii', 'replace')	# ASCII encoding failures -> '?'.
+    ###---t = s.encode('ascii', 'replace')	# ASCII encoding failures -> '?'.
+    t = s.encode(encoding, 'replace')	# ASCII encoding failures -> '?'.
     if isinstance(rplc, str):
         # Replace encoding failures with rplc.
         u = ''
@@ -21,12 +23,20 @@ def unicodetoascii(s, rplc=None):
                 u += chr(ct)
         return u
     else:
-        return t.decode('ascii')		# ASCII bytes to str.
+        ###---return t.decode('ascii')		# ASCII bytes to str.
+        return t.decode(encoding)		# ASCII bytes to str.
 
 def toascii(s):
     """Calls _unicodetoascii(s) with rplc defaulting to '~'.  Bytes returned unchanged."""
     if isinstance(s, str):
         return unicodetoascii(s, rplc='~')
+    else:
+        return s
+
+def tolatin1(s):
+    """Calls _unicodetoascii(s, encoding='latin-1') with rplc defaulting to '~'.  Bytes returned unchanged."""
+    if isinstance(s, str):
+        return unicodetoascii(s, encoding='latin-1', rplc='~')
     else:
         return s
 
@@ -90,8 +100,45 @@ def fnsplit(fn):
         return fn, None
     return (fn[:x], fn[x:])
 
-# Cloned into l_helpers...
+def etfooter(pc0, pc1=None):
+    """Elapsed time string for use as page footer, given an initial perfcntr."""
+    return '[%s]' % prettydt(pc0, pc1)
+  
+def prettydt(pc0, pc1=None):
+    """Make and pretty-format a delta time, given a starting perfcntr."""
+    if pc1 is None:
+        pc1 = time.perf_counter()
+    return prettyet(pc1 - pc0)
+
+def prettyet(et):
+    """Pretty format an elapsed-time."""
+    zt = et * 1000000         # -> us
+    if round(zt) < 10000:
+        return '{:,.1f} us'.format(zt)
+    zt /= 1000                # -> ms
+    if round(zt) < 10000:
+        return '{:,.1f} ms'.format(zt)
+    zt /= 1000                # -> se
+    if zt < 600:
+        return '{:,.1f} se'.format(zt)
+    zt /= 60                  # -> mi
+    if zt < 600:
+        return '{:,.1f} mi'.format(zt)
+    zt /= 60                  # -> hr
+    if zt < 24:
+        return '{:,.1f} hr'.format(zt)
+    zt /= 24                  # -> da
+    if True:
+        return '{:,.1f} da'.format(zt)
+
+####################################################################
+
+# A subset of l_dt for Flask.
+
+###import math, time
+
 DOW = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
+
 def utcut():
     """-> UTC Unix Time."""
     return time.time()
@@ -129,39 +176,7 @@ def ts(ts=None):
     """-> ut2isocs from ts (or now if None or zero)."""
     if not ts:
         ts = utcut()
-    return ut2isocs(ts)  
-# ...end of l_helpers cloning.
-
-def etfooter(pc0, pc1=None):
-    """Elapsed time string for use as page footer, given an initial perfcntr."""
-    return '[%s]' % prettydt(pc0, pc1)
-  
-def prettydt(pc0, pc1=None):
-    """Make and pretty-format a delta time, given a starting perfcntr."""
-    if pc1 is None:
-        pc1 = time.perf_counter()
-    return prettyet(pc1 - pc0)
-
-def prettyet(et):
-    """Pretty format an elapsed-time."""
-    zt = et * 1000000         # -> us
-    if round(zt) < 10000:
-        return '{:,.1f} us'.format(zt)
-    zt /= 1000                # -> ms
-    if round(zt) < 10000:
-        return '{:,.1f} ms'.format(zt)
-    zt /= 1000                # -> se
-    if zt < 600:
-        return '{:,.1f} se'.format(zt)
-    zt /= 60                  # -> mi
-    if zt < 600:
-        return '{:,.1f} mi'.format(zt)
-    zt /= 60                  # -> hr
-    if zt < 24:
-        return '{:,.1f} hr'.format(zt)
-    zt /= 24                  # -> da
-    if True:
-        return '{:,.1f} da'.format(zt)
+    return ut2isocs(ts)
 
 """
 

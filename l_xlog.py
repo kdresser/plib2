@@ -28,7 +28,7 @@ SORT_KEYS = True
 
 class XLog():
 
-    def __init__(self, xloghost=None, xlogport=None, xsrcid=None, xsubid=None, xlogel=2, xlogsl='_', 
+    def __init__(self, xloghost=None, xlogport=None, xsrcid=None, xsubid=None, xlogel='2', xlogsl='_', 
                  sl=None, sw=None, txrate=0.02, nop=False):
         me = 'XLog.__init__'
         self.nop      = nop         # Make a do-nothing logger.
@@ -36,7 +36,7 @@ class XLog():
         self.xloghost = xloghost    # xlog server host IP.
         self.xlogport = xlogport    # xlog server port.
         # srcid, subid, el & sl are defaults used by message builders if no
-        # overrides are in the log dict.
+        # overrides are supplied in the log dict.
         self.xsrcid   = xsrcid      # Initial source ID.  
         self.xsubid   = xsubid      # Initial sub    ID. 
         self.xlogel   = xlogel      # Default error-level (info).

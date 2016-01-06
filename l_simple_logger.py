@@ -25,7 +25,7 @@ DEBUG = False
 
 class SimpleLogger():
 
-    def __init__(self, screen_writer=None, log_file=None):
+    def __init__(self, screen_writer=None, log_file=None, log_file_queue=False):
         """A simple logger to either screen_writer and/or open log_file."""
         # Locks for everything that moves; used during debugging/testing.
         self.MLLOCK = threading.Lock()  # _any() 
@@ -35,6 +35,9 @@ class SimpleLogger():
         # Objects to log to.
         self.SW = screen_writer
         self.LF = log_file
+        self.LFQ = log_file_queue
+        if self.LFQ:
+            self.LFQ = []
         # Instrumentation for lock debugging
         self.MLLK = None                
         self.LGLK = None                
@@ -105,9 +108,13 @@ class SimpleLogger():
         """   # -> True if s is already prefixed.  Mostly used internally."""
         return s[:3] in ('-- ', '>> ', '** ', '## ', '~~ ', '.. ', '== ', '^^ ', '__ ', '!! ')
 
+    def _log_file(self, lf):
+        self.LF = lf
+
     def _log(self, s):
         """Log s asis. Mostly used internally."""
         # Null s ignored.
+        # Has as pre-LF queue.
         if DEBUG:
             self._LGLOCK('+0')
         else:
@@ -134,9 +141,16 @@ class SimpleLogger():
                     else:
                         self.LFLOCK.acquire()
                     try:
+                        if isinstance(self.LFQ, list):
+                            for z in self.LFQ:
+                                self.LF.write(z + '\n')
+                            self.LFQ = None
                         self.LF.write(s + '\n')
                         self.LF.flush()
                         os.fsync(self.LF.fileno())
+                    except KeyboardInterrupt:
+                        1/1
+                        raise
                     except:
                         try:    self.LF.close()
                         except: pass
@@ -146,6 +160,9 @@ class SimpleLogger():
                             self._LFLOCK('-0')
                         else:
                             self.LFLOCK.release()
+                else:
+                    if isinstance(self.LFQ, list):
+                        self.LFQ.append(s)
         finally:
             if DEBUG:
                 self._LGLOCK('-0')
