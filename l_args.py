@@ -12,49 +12,55 @@
 ###        section plus updates from SYSARGVS.
 ###   ARGS is the final dict of arguments.
 ###
+### 160121: Deprecating docopt (in favor of clkvs).
+###
 
 import os, sys, configparser
-###...import docopt as _docopt  # Now conditionally imported.
 import l_dt as _dt
 import l_misc as _m
 
+'''...
+CWD = None          # Being phased out, along with docopt.
+VERSION = None      # ...
+
+ME = None           # Determined in get_args().
+INIPFN = None       # If used, provides defaults for clkvs.
 INI = None          # Contains [args], plus possibly other sections.
-SYSARGVS = None     # Arguments from command line (via docopt).
-ARGS = {}           # Final arguments, from INI[args] with SYS.ARGV overrides via DOCOPT.
-                    # Note: Additional sections (other than [args]) must be accessed via INI.
+SYSARGVS = None     # Arguments from command line (via clkvs).
+ARGS = None         # Final arguments, from INI[args] with SYS.ARGV 
+                    # overrides via clkvs. INI can be used to 
+                    # access sections other than [args].
+...'''
 
-(ME, _), VERSION = os.path.splitext(os.path.split(sys.argv[0])[1]), 'unknown'
+def GLOBAL_INITS():
+    global CWD, VERSION
+    global ME, INIPFN, INI, SYSARGVS, ARGS
+    CWD = VERSION = None
+    ME = INIPFN = INI = None
+    ###---# ??? Might {} be a better default for INI?
+    SYSARGVS, ARGS = {}, {}
 
-# Read INI file.  DNE is OK.
+# Read INI file if INIPFN.
 def get_ini():
     global INIPFN, INI
-    INIPFN = SYSARGVS.get('--ini') if SYSARGVS.get('--ini') else INIPFN
+    1/1
+    if INI or not INIPFN or not os.path.isfile(INIPFN):
+        return
+    me = 'get_ini({})'.format(INIPFN)
     try:
-        if not os.path.isfile(INIPFN):
-            INI = None
-            #$#print('>> no ini:', INIPFN)#$#
-        else:
-            #$#print('-- ini:', INIPFN)#$#
-            INI = configparser.ConfigParser(allow_no_value=True)
-            INI.read(INIPFN)
-            # --qqsv=   -> ''
-            # --qqsv    -> None
-            if False:
-                for s, _ in INI.items():
-                    #$#print('SECTION:', s)#$#
-                    for k, v in INI[s].items():
-                        #$#print('  ', k, '=', v)#$#
-                        pass
+        INI = configparser.ConfigParser(allow_no_value=True)
+        # something =   -> ''
+        # something     -> None
+        INI.read(INIPFN)
+        if False:
+            for s, _ in INI.items():
+                #$#print('SECTION:', s)#$#
+                for k, v in INI[s].items():
+                    #$#print('  ', k, '=', v)#$#
+                    pass
     except Exception as E:
-        errmsg = str(E)
-        #$#print('**', errmsg)#$#
-        INI = None
-        raise
-        ''''...
-        #$#print('**', errmsg)#$#
-        #$#print('>> no ini file')#$#
-        INI = None
-        ...'''
+        errmsg = '{}: {}'.format(me, E)
+        raise RuntimeError(errmsg)
     finally:
         1/1
 
@@ -62,22 +68,26 @@ def get_ini():
 # V's are strings, but no '=' -> True.
 # 150914: lowercase keys.
 def get_clkvs(lowercase=True):
+    1/1
     clkvs = {}
-    try:
-        for kv in sys.argv[1:]:
-            if '=' in kv:
-                k, v = kv.split('=', 1)
-                v = v.strip()               # ??? Redundant?
-            else:
-                k, v = kv, True
-            if lowercase:
-                k = k.lower()
-            clkvs[k] = v
-    finally:
-        return clkvs
+    for kv in sys.argv[1:]:
+        if '=' in kv:
+            k, v = kv.split('=', 1)
+            v = v.strip()               # ??? Redundant?
+        else:
+            # This matches ini file behaviour (as used).
+            k, v = kv, True     
+            # TODO: ??? -/+ prefixes?
+        if lowercase:
+            k = k.lower()
+        clkvs[k] = v
+    1/1
+    return clkvs
 
-def get_sysargvs(docstr=None, help=None, docopt=True, clkvs=False):
+### get_sysargvs(docstr=None, help=None, docopt=True, clkvs=False): # Phasing out.
+def get_sysargvs(docstr=None, help=None, docopt=False, clkvs=True):
     global SYSARGVS
+    1/1
     if   docopt:
         import docopt as _docopt
         # Use docopt to parse sys.argv.
@@ -87,13 +97,18 @@ def get_sysargvs(docstr=None, help=None, docopt=True, clkvs=False):
         SYSARGVS = get_clkvs()
     else:
         SYSARGVS = {}
+    1/1
 
-def get_args(doc=None, version=None, me=None, help=True, docopt=True, clkvs=False, inipfn=None):
-    global ARGS, INIPFN, ME, VERSION, CWD
+# Deprecated docopt -> a suffixed version using it.
+def get_args_docopt(doc=None, version=None, me=None, help=True, docopt=True, clkvs=False, inipfn=None, useini=True):
+    global ARGS, ME, INIPFN, USEINI, INI, VERSION, CWD
+    1/1
     try:
+        GLOBAL_INITS()
         if me:
             ME = me
         VERSION = version
+        USEINI = useini
         if inipfn:
             INIPFN = inipfn
         else:
@@ -101,20 +116,18 @@ def get_args(doc=None, version=None, me=None, help=True, docopt=True, clkvs=Fals
         CWD = os.getcwd()
         get_sysargvs(docstr=doc, help=help, docopt=docopt, clkvs=clkvs)
         get_ini()
-        # Build ARGS from INI[args] and SYSARGVS (overrides).
+        # Build ARGS from INI[args] and 
+        # SYSARGVS (overrides via docopt).
         try:
-            if INI:
+            if USEINI and INI:
                 ARGS = dict([(k, True if v is None else v) for k, v in INI['args'].items()])
             else:
                 ARGS = {}
-            ###ARGS.update(dict([(k, v) for k, v in SYSARGVS.items()])) # !!! None's clobber!
+            # None's from docopt clobber ini values.
+            ###ARGS.update(dict([(k, v) for k, v in SYSARGVS.items()]))
             for k, v in SYSARGVS.items():
                 if v is not None:
                     ARGS[k] = v
-            ARGS['--me'] = ME
-            ARGS['--version'] = VERSION
-            ARGS['cwd'] = CWD                   # Record environment directory.
-            ARGS['inipfn'] = INIPFN             # Record what was used.
             return ME
         except Exception as E:
             raise
@@ -122,6 +135,60 @@ def get_args(doc=None, version=None, me=None, help=True, docopt=True, clkvs=Fals
         errmsg = 'get_args: %s @ %s' % (E, _m.tblineno())
         1/1
         raise
+    finally:
+        1/1
+
+# New implementation uses command line kv's and optionally, an ini file.
+def get_args(me=None, inipfn=None, useini=True):
+    global SYSARGVS, ARGS, INIPFN, INI, ME, VERSION
+    1/1
+    try:
+        GLOBAL_INITS()
+
+        # Hide/disable old version stuff.
+        doc = version = None
+        help = docopt = False
+        clkvs = True
+
+        # Determine ME.
+        if me:
+            ME = me
+        else:
+            (ME, _) = os.path.splitext(os.path.split(sys.argv[0])[1])
+
+        # Get command line arguments, holding them aside.
+        1/1
+        get_sysargvs(docstr=doc, help=help, docopt=docopt, clkvs=clkvs)
+        SYSARGVS = SYSARGVS
+        1/1
+
+        # Determine INI, if used.
+        if useini:
+            INIPFN = ME + '.ini'
+            INIPFN = SYSARGVS.get('ini', INIPFN)
+            INIPFN = inipfn or INIPFN
+            get_ini()
+        INI = INI
+        1/1
+
+        # ARGS <- combine INI [args] and SYSARGVS (clkvs).
+        1/1
+        try:    ARGS = dict([(k, True if v is None else v) for k, v in INI['args'].items()])
+        #                        ^^^          ^^^
+        #                                     ^^^ When ini kv has no = and no v.
+        except: ARGS = {}
+        ARGS = ARGS
+        1/1
+        ARGS.update(dict([(k, v) for k, v in SYSARGVS.items()]))
+        ARGS = ARGS
+        1/1
+
+        return ME
+
+    except Exception as E:
+        1/1
+        errmsg = '{}: {} @ {}' % (me, E, _m.tblineno())
+        raise RuntimeError(errmsg)
     finally:
         1/1
 
@@ -184,7 +251,7 @@ def argBoolean(key, name, default=None, must=False):
     if not key in ARGS:
         if must:
             errmsg = 'no {} / {}'.format(key, name)
-            raise Exception(errmsg)
+            raise RuntimeError(errmsg)
         else:
             dflt()
             return default
@@ -194,7 +261,7 @@ def argBoolean(key, name, default=None, must=False):
         return default
     if not xisbool(x):
         errmsg = '{} / {} is not boolean: "{}"'.format(key, name, x)
-        raise Exception(errmsg)
+        raise ValueError(errmsg)
     y = x2bool(x)
     msg = '{} / {} "{}" -> {}'.format(key, name, x, y)
     if _sl:
@@ -211,7 +278,7 @@ def argFloat(key, name, default=None, must=False):
     if not key in ARGS:
         if must:
             errmsg = 'no {} / {}'.format(key, name)
-            raise Exception(errmsg)
+            raise RuntimeError(errmsg)
         else:
             msg = '{} / {} defaulting to {}'.format(key, name, default)
             if _sl:
@@ -223,7 +290,7 @@ def argFloat(key, name, default=None, must=False):
         return default
     if not xisfloat(x):
         errmsg = '{} / {} is not float: "{}"'.format(key, name, x)
-        raise Exception(errmsg)
+        raise ValueError(errmsg)
     y = x2float(x)
     msg = '{} / {} "{}" -> {}'.format(key, name, x, y)
     if _sl:
@@ -240,7 +307,7 @@ def argInteger(key, name, default=None, must=False):
     if not key in ARGS:
         if must:
             errmsg = 'no {} / {}'.format(key, name)
-            raise Exception(errmsg)
+            raise RuntimeError(errmsg)
         else:
             dflt()
             return default
@@ -250,7 +317,7 @@ def argInteger(key, name, default=None, must=False):
         return default
     if not xisint(x):
         errmsg = '{} / {} is not integer: "{}"'.format(key, name, x)
-        raise Exception(errmsg)
+        raise ValueError(errmsg)
     y = x2int(x)
     msg = '{} / {} "{}" -> {}'.format(key, name, x, y)
     if _sl:
@@ -267,7 +334,7 @@ def argString(key, name, default=None, must=False):
     if not key in ARGS:
         if must:
             errmsg = 'no {} / {}'.format(key, name)
-            raise Exception(errmsg)
+            raise RuntimeError(errmsg)
         else:
             dflt()
             return default

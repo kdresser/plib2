@@ -11,7 +11,6 @@ def unicodetoascii(s, encoding='ascii', rplc=None):
     # ??? Is this sane: just to have a different replacement char than '?'?
     if not isinstance(s, str):
         return s
-    ###---t = s.encode('ascii', 'replace')	# ASCII encoding failures -> '?'.
     t = s.encode(encoding, 'replace')	# ASCII encoding failures -> '?'.
     if isinstance(rplc, str):
         # Replace encoding failures with rplc.
@@ -23,7 +22,6 @@ def unicodetoascii(s, encoding='ascii', rplc=None):
                 u += chr(ct)
         return u
     else:
-        ###---return t.decode('ascii')		# ASCII bytes to str.
         return t.decode(encoding)		# ASCII bytes to str.
 
 def toascii(s):

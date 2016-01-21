@@ -10,7 +10,8 @@
 ###
 
 import urllib
-import mmisc2 as mi
+
+import l_misc as _m
 
 import sys
 P3 = (sys.version_info[0] == 3)
@@ -48,20 +49,22 @@ def fakebrowser(bc='O'):
 ###     All whitespace is reduced to single blanks (default).
 ###     There is no awareness of &nbsp;'s or any special encodings.
 ### Returns (True/False, Response Message, Token List)
-### Exceptions are turned into a response message.
 ###
 def html2tokens(rawhtm, ws2sb=True):
     me = 'html2tokens'
     rc, rm, tks = False, '???', []
     try:
+
         if not rawhtm:
             rc, rm = True, ''
-            return
+            return rc, rm, tks
+
         # Split into lines.
         if type(rawhtm) is tuple or type(rawhtm) is list:
             ls = rawhtm
         else:
             ls = rawhtm.replace('\r', '\n').split('\n')
+
         # Split the lines into tags & text fragments.
         ttfs = []
         for l in ls:
@@ -79,6 +82,7 @@ def html2tokens(rawhtm, ws2sb=True):
                             ttfs.append(s[x:])
                         else:
                             ttfs.append(s)
+
         # Join text fragments.
         tks = []
         jt = None
@@ -99,13 +103,15 @@ def html2tokens(rawhtm, ws2sb=True):
                     jt += ' ' + s
                 else:
                     jt = s
+
         # Done.
         rc, rm = True, ''
-    except Exception as E:
-        rc, rm = False, '%s @ %s' % (E, mi.tblineno())
-    finally:
-        return (rc, rm, tks)
+        return rc, rm, tks
 
+    except Exception as E:
+        errmsg = '{}: E: {} @ {}'.format(me, E, _m.tblineno())
+        raise RuntimeError(errmsg)
+        
 """...
 ###
 ### parseelement:  Returns a dict, including an 'e-n'='element name' (lowercased).
@@ -114,13 +120,13 @@ def html2tokens(rawhtm, ws2sb=True):
 # t = '<script language="JavaScript1.2" src="dui.js" type="text/javascript">'
 # t = '<link href="App_Themes/Zorilla.net/mathml.css" type="text/css" rel="stylesheet">'
 def parseelement(e):
-    me, action = 'mparseelement', ''
+    me = 'parseelement'
     rc, rm, rd = False, '???', {}
     try:
         rd = {}
         if not e or e[0] != '<' or e[-1] != '>':
             rc, rm = True, ''
-            return
+            return rc, rm, rd
         w = e[1:-1].strip()
         try:    z, w = w.split(' ', 1)
         except: z, w = w, None
@@ -149,42 +155,43 @@ def parseelement(e):
                     v, w = w, None
             rd[k.lower()] = v
         rc, rm = True, ''
+        return rc, rm, rd
     except Exception as E:
-        rc, rm = False, '%s @ %s' % (E, mi.tblineno())
-    finally:
-        return (rc, rm, rd)
+        errmsg = '{}: E: {} @ {}'.format(me, E, _m.tblineno())
+        raise RuntimeError(errmsg)
 ..."""
 
 # Parse a tag into name, KV's and a delta-level value.
 def tagParse(tag):
+    me = 'tagParse'
     tn, kvs, dl = None, None, None
     try:
 
         # Nothing? 
         if not tag:
-            return
+            return tn, kvs, dl
         tag = tag.strip()
         if not tag or tag[0] != '<' or tag[-1] != '>':
             1/1
             # Empty, or not a tag at all.
-            return
+            return tn, kvs, dl
 
         tag = tag
 
         # <!-- ... -->
         if   tag.startswith('<!--') and tag[-1] == '-->':
             tn, kvs, dl = 'comment', tag[4:-3].strip(), 0
-            return
+            return tn, kvs, dl
 
         # <!-- ... >
         elif tag.startswith('<!--') and tag[-1] == '>':
             tn, kvs, dl = 'extension', tag[4:-3].strip(), +1
-            return
+            return tn, kvs, dl
 
         # <! ... -->
         elif tag.startswith('<!') and tag[-1] == '-->':
             tn, kvs, dl = 'extension', tag[4:-3].strip(), -1
-            return
+            return tn, kvs, dl
 
         # <! ... >
         elif tag.startswith('<!') and tag[-1] == '>':
@@ -196,12 +203,12 @@ def tagParse(tag):
             try:    kvs = kvs.strip()
             except: kvs = None
             dl = 0
-            return
+            return tn, kvs, dl
 
         # </ ... >
         elif tag.startswith('</') and tag[-1] == '>':
             tn, kvs, dl = tag[2:-1].strip(), None, -1
-            return
+            return tn, kvs, dl
 
         # < ... />
         elif tag[0] == '<' and tag.endswith('/>'):
@@ -224,15 +231,15 @@ def tagParse(tag):
         # < ??? >
         else:
             tn, kvs, dl = '???', tag[1:-1].strip(), None, 0
-            return
+            return tn, kvs, dl
 
         # Convert kvs to a dict.
 
         if not kvs:
-            return
+            return tn, kvs, dl
         kvs = kvs.strip()
         if not kvs:
-            return
+            return tn, kvs, dl
         w = kvs
         rd = {}
 
@@ -310,12 +317,11 @@ def tagParse(tag):
 
         kvs = rd
 
+        return tn, kvs, dl
+
     except Exception as E:
-        errmsg = 'eType: %s @ %s' % (E, mi.tblineno())
-        print(errmsg)#$#
+        errmsg = '{}: E: {} @ {}'.format(me, E, _m.tblineno())
         raise ValueError(errmsg)
-    finally:
-        return (tn, kvs, dl)
 
 """...
 ###
@@ -329,13 +335,14 @@ def tagParse(tag):
 # <foo a="b"/> -> '/foo/', {'a': 'b'}
 # </head>      -> '/head', {}
 def parseElement(e):
+    me = 'parseElement'
     en, kvs = None, {}
     try:
         if not e:
-            return
+            return en, kvs
         e = e.strip()
         if not e or e[0] != '<' or e[-1] != '>':
-            return
+            return en, kvs
         ###
         if   irec.startswith('<!--') and irec[-1] == '>':
             pfx, sfx, z = '!', '', e[4:-1].strip()
@@ -359,11 +366,10 @@ def parseElement(e):
         for k, v in y.strip().split(' '):
             if len(v) >= 2 and v[0] in ('"', "'") and v[0] == v[-1]:
                 kvs[k.lower()] = v[1:-1].strip()
+        return en, kvs
     except Exception as E:
-        errmsg = 'parseElement: %s @ %s' % (E, mi.tblineno())
-        mi.error(errmsg)
-    finally:
-        return (en, kvs)
+        errmsg = '{}: E: {} @ {}.format(me, E, _m.tblineno())
+        raise RuntimeError(errmsg)
 ..."""
 
 ###
@@ -372,7 +378,7 @@ def parseElement(e):
 ### Returns None if no base element(s) encountered.
 ###
 def findbase(tks):
-    me, action = 'mfindbase', ''
+    me = 'findbase'
     rc, rm, rd = False, '???', {}
     try:
         inhead, z = False, {}
@@ -385,7 +391,7 @@ def findbase(tks):
                     inhead = True
                 elif en == '/head':
                     inhead = False
-                    return
+                    return rc, rm, None if not rd else rd
                 elif inhead and en == 'base':
                     href, target = z.get('href'), z.get('target')
                     if   href and rd.get('href') is None:
@@ -398,12 +404,10 @@ def findbase(tks):
                 continue
             pass
         rc, rm = True, ''
+        return rc, rm, None if not rd else rd
     except Exception as E:
-        rc, rm = False, '%s @ %s' % (E, mi.tblineno())
-    finally:
-        if not rd:
-            rd = None
-        return (rc, rm, rd)
+        errmsg = '{}: E: {} @ {}'.format(me, E, _m.tblineno())
+        raise RuntimeError(errmsg)
 
 def pctdecode(s):
     if s:
