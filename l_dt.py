@@ -10,7 +10,7 @@ dtEPOCH = datetime.datetime.utcfromtimestamp(0)
 
 # UTC unix time now.  Has fractional seconds.
 def utcut():
-    """-> UTC Unix Time now.  Uses library time.time."""   
+    """-> UTC Unix Time now.  Uses library time.time()."""   
     return time.time()
 
 # UTC unix time now.  Fractional seconds kludged. 
@@ -48,12 +48,14 @@ def ut2iso(ut, sep=' '):
     return '%04d-%02d-%02d%s%02d:%02d:%02d' % \
         (tm.tm_year, tm.tm_mon, tm.tm_mday, sep, tm.tm_hour, tm.tm_min, tm.tm_sec)
 
-# An ISO date & time with fraction seconds.  Assumes UTC input.  Defaults to a space date-time separator.
-def ut2isofs(ut, sep=' '):
+# An ISO date & time with fraction seconds.  Assumes naive UTC input.  
+# Defaults to a space for the date-time separator.
+# Defaults to 4 decimal digits.  E.g., Setting ndd=1 will produce deciseconds.
+def ut2isofs(ut, sep=' ', ndd=4):
     """UTC UT -> 'YYYY-MM-DD HH:MM:SS.1234'. No TZ or offset."""
     b, a = math.modf(ut)   # Fractional part, whole part.
     tm = time.gmtime(a)
-    fs = ('%.4f' % b)[1:]
+    fs = (('%%.%df' % ndd) % b)[1:]
     return '%04d-%02d-%02d%s%02d:%02d:%02d%s' % \
         (tm.tm_year, tm.tm_mon, tm.tm_mday, sep, tm.tm_hour, tm.tm_min, tm.tm_sec, fs)
 

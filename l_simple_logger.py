@@ -25,7 +25,7 @@ DEBUG = False
 
 class SimpleLogger():
 
-    def __init__(self, screen_writer=None, log_file=None, log_file_queue=False):
+    def __init__(self, screen_writer=None, log_file=None, log_file_queue=False, callback=None):
         """A simple logger to either screen_writer and/or open log_file."""
         # Locks for everything that moves; used during debugging/testing.
         self.MLLOCK = threading.Lock()  # _any() 
@@ -38,6 +38,8 @@ class SimpleLogger():
         self.LFQ = log_file_queue
         if self.LFQ:
             self.LFQ = []
+        # And a callback for the user to see what's logged.
+        self.CB = callback
         # Instrumentation for lock debugging
         self.MLLK = None                
         self.LGLK = None                
@@ -111,7 +113,7 @@ class SimpleLogger():
     def _log_file(self, lf):
         self.LF = lf
 
-    def _log(self, s):
+    def _log(self, s, logfile=True, screen=True):
         """Log s asis. Mostly used internally."""
         # Null s ignored.
         # Has as pre-LF queue.
@@ -122,8 +124,11 @@ class SimpleLogger():
         try:
             if not s:   return
             s = str(s).rstrip()
+            # User callback?
+            if self.CB:
+                s = self.CB(s)
             if s:
-                if self.SW:
+                if screen and self.SW:
                     if DEBUG:
                         self._MSLOCK('+0')
                     else:
@@ -135,7 +140,7 @@ class SimpleLogger():
                             self._MSLOCK('-0')
                         else:
                             self.SWLOCK.release()
-                if self.LF:
+                if logfile and self.LF:
                     if DEBUG:
                         self._LFLOCK('+0')
                     else:

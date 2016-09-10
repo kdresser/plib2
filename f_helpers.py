@@ -1,7 +1,13 @@
 
 # Flask App Helpers.  !P3!.
 
-import sys, binascii, time, math, hashlib
+1/1
+
+import sys
+import binascii
+import time
+import math
+import hashlib
 
 #DOW = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')    # See below.
 
@@ -24,10 +30,10 @@ def unicodetoascii(s, encoding='ascii', rplc=None):
     else:
         return t.decode(encoding)		# ASCII bytes to str.
 
-def toascii(s):
+def toascii(s, rplc='~'):
     """Calls _unicodetoascii(s) with rplc defaulting to '~'.  Bytes returned unchanged."""
     if isinstance(s, str):
-        return unicodetoascii(s, rplc='~')
+        return unicodetoascii(s, rplc=rplc)
     else:
         return s
 

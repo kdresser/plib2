@@ -1,4 +1,6 @@
 
+1/1
+
 import time
 from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR
 import l_misc as _m
@@ -11,7 +13,7 @@ TXENCODING, TXERRORS = 'ascii', 'strict'  # For Tx of unicode.
 class XLogTxRx():
     """A TCP/IP transmitter/receiver, with reconnection and backlogging, for use with an xlog server."""
 
-    def __init__(self, hostport, txrate=0, cxrate=60, cxtimeout=3, txtimeout=0.5, cx=True):
+    def __init__(self, hostport, txrate=0, cxrate=60, cxtimeout=3, txtimeout=0.5, cx=True, acking=True):
         self.hostport = hostport
         self.skt = None         # Will be none when not connected.
         self.cxts = 0           # Timestamp of last connection attempt.
@@ -27,6 +29,7 @@ class XLogTxRx():
         self.txrate = txrate    # Mininum time between transmissions.
         self.txtimeout = txtimeout
         self.txerrmsg = None    # Last tx errmsg.
+        self.acking = acking    # Does the remote server ack (with 'OK')?
         if cx:
             z = self.connect()
 
@@ -96,7 +99,7 @@ class XLogTxRx():
                 self.connect()
                 # If there's still no socket, bail.
                 if not self.skt:
-                    return False
+                    return sent
             # There's a socket.  Any backlog to output?
             if self.txbacklog and not self.txbackout:       # Inhibit recursive txbackout calls to send.
                 self.txbackout = True
@@ -106,13 +109,13 @@ class XLogTxRx():
                             self.txbacklog.pop(0)
                         else:
                             # A txbackout hasn't finished. 
-                            return False
+                            return sent
                 finally:
                     self.txbackout = False
             # None msg?
             if msg is None:
                 sent = True         # Pretend.
-                return True         # Connected and all txbacklog has been output.
+                return sent         # Connected and all txbacklog has been output.
             # Throttle (blocking).
             w = self.txrate - (time.time() - self.txts)
             if w > 0:
@@ -122,13 +125,17 @@ class XLogTxRx():
                 self.txts = time.time()
                 try:  rx = self.txrx(msg).rstrip()
                 except:  rx = None
-                if rx and rx.startswith(b'OK'):     # Every transmission is acknowledged with an OK.
-                    sent = True
+                if self.acking:
+                    if rx and rx.startswith(b'OK'):     # Every transmission is acknowledged with an OK.
+                        sent = True
+                else:
+                    sent = True                 # Assume success.
             except Exception as E:
                 errmsg = 'sendall: %s @ %s' % (E, _m.tblineno())
                 self.txerrmsg = errmsg
                 #$#ml.error(self.txerrmsg)#$#   # Nope!
                 self.disconnect()
+            return sent
         except Exception as E:
             errmsg = 'send: {} @ {}'.format(E, _m.tblineno())
             self.txerrmsg = errmsg
@@ -139,7 +146,6 @@ class XLogTxRx():
                self.disconnect()
                if msg is not None and not self.txbackout:
                    self.txbacklog.append(msg)
-            return sent 
 
     def close(self):
         """Disconnect and release socket."""

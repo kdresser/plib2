@@ -196,5 +196,3 @@ class ScreenWriter():
                 else:
                     t += '?'
             return t
-
-###

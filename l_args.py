@@ -99,7 +99,7 @@ def get_sysargvs(docstr=None, help=None, docopt=False, clkvs=True):
         SYSARGVS = {}
     1/1
 
-# Deprecated docopt -> a suffixed version using it.
+# Deprecated docopt, so a _docopt suffix is required to use it.
 def get_args_docopt(doc=None, version=None, me=None, help=True, docopt=True, clkvs=False, inipfn=None, useini=True):
     global ARGS, ME, INIPFN, USEINI, INI, VERSION, CWD
     1/1
@@ -139,7 +139,8 @@ def get_args_docopt(doc=None, version=None, me=None, help=True, docopt=True, clk
         1/1
 
 # New implementation uses command line kv's and optionally, an ini file.
-def get_args(me=None, inipfn=None, useini=True):
+def get_args(me=None, inipfn=None, useini=False):
+    #                                     ^^^ default to no ini file usage.
     global SYSARGVS, ARGS, INIPFN, INI, ME, VERSION
     1/1
     try:
@@ -161,6 +162,10 @@ def get_args(me=None, inipfn=None, useini=True):
         get_sysargvs(docstr=doc, help=help, docopt=docopt, clkvs=clkvs)
         SYSARGVS = SYSARGVS
         1/1
+
+        # The presence of an inipfn turns on useini.
+        if inipfn is not None:
+            useini = True
 
         # Determine INI, if used.
         if useini:
