@@ -197,6 +197,11 @@ class SimpleLogger():
                 else:
                     self.MLLOCK.release()
 
+    def asis(self, s='', lock=True):        # asis
+        """Asis: no prefix."""
+        pfx = ''
+        self._any(pfx, s, lock=lock)
+
     def null(self, s='', lock=True):        # [0]
         """Level 0: null '__ ' prefix."""
         pfx = '__ '
